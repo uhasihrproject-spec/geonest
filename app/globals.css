@@ -24,3 +24,56 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---- smooth entrance animation ---- */
+.fade-up {
+  animation: fadeUp 700ms ease-out both;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- subtle floating glow ---- */
+.floaty {
+  animation: floaty 6s ease-in-out infinite;
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translate(0, 0); }
+  50%      { transform: translate(10px, -10px); }
+}
+
+/* ---- button shimmer (premium feel) ---- */
+.btn-shimmer {
+  position: relative;
+}
+
+.btn-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-120%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.35),
+    transparent
+  );
+  transition: transform 900ms ease;
+}
+
+.btn-shimmer:hover::after {
+  transform: translateX(120%);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeIn .25s ease-out; }
