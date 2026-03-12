@@ -72,7 +72,7 @@ export default function HeroInspo() {
 
       <div className="mx-auto max-w-7xl px-4">
         {/* Full-bleed white hero */}
-        <div className="min-h-[78vh] md:min-h-[82vh] grid items-center gap-10 md:gap-12 md:grid-cols-2">
+        <div className="min-h-[72vh] md:min-h-[82vh] grid items-center gap-10 md:gap-12 md:grid-cols-2">
           {/* LEFT */}
           <div className="gm-rise">
             <p className="text-[11px] md:text-xs tracking-[0.35em] text-neutral-500">
@@ -159,15 +159,15 @@ export default function HeroInspo() {
             </div>
 
             {/* Floating labels (adaptive / safe on mobile) */}
-            <div className="gm-float absolute right-2 md:right-2 top-6 md:top-10 rounded-full bg-white px-4 py-2 text-xs md:text-sm ring-1 ring-neutral-200/70">
+            <div className="gm-float hidden md:block absolute right-2 top-10 rounded-full bg-white px-4 py-2 text-sm ring-1 ring-neutral-200/70">
               Minimal design
             </div>
 
-            <div className="gm-float-2 absolute left-2 md:left-2 bottom-24 md:bottom-28 rounded-full bg-white px-4 py-2 text-xs md:text-sm ring-1 ring-neutral-200/70">
+            <div className="gm-float-2 hidden md:block absolute left-2 bottom-28 rounded-full bg-white px-4 py-2 text-sm ring-1 ring-neutral-200/70">
               Curated picks
             </div>
 
-            <div className="gm-float absolute left-1/2 bottom-6 md:bottom-8 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-xs md:text-sm ring-1 ring-neutral-200/70">
+            <div className="gm-float hidden md:block absolute left-1/2 bottom-8 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-sm ring-1 ring-neutral-200/70">
               Shop smart
             </div>
 

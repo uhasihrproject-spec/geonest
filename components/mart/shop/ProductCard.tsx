@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { MartProduct } from "@/lib/mart/data";
+import type { Product } from "@/lib/mart/productsLocal";
 import { ShoppingCart, Heart } from "lucide-react";
 import { useMartStore } from "@/lib/mart/store";
 import * as React from "react";
@@ -12,9 +12,9 @@ export default function ProductCard({
   delayMs = 0,
   onAskAI,
 }: {
-  product: MartProduct;
+  product: Product;
   delayMs?: number;
-  onAskAI?: (product: MartProduct) => void;
+  onAskAI?: (product: Product) => void;
 }) {
   const addToCart = useMartStore((s) => s.addToCart);
   const toggleWishlist = useMartStore((s) => s.toggleWishlist);

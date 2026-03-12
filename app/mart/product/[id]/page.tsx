@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getProducts, type Product } from "@/lib/mart/productsLocal";
+import { getProducts, syncProductsFromServer, type Product } from "@/lib/mart/productsLocal";
 import ProductClient from "./ProductClient";
 
 function normCategory(p: any) {
@@ -20,6 +20,7 @@ export default function ProductPage() {
   useEffect(() => {
     // load from localStorage-aware source
     setAll(getProducts());
+    void syncProductsFromServer().then(setAll);
 
     // if another tab updates products, refresh
     const onStorage = () => setAll(getProducts());

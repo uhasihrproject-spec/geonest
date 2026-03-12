@@ -1,6 +1,7 @@
 // app/api/mart/assistant/route.ts
 import { NextResponse } from "next/server";
-import { PRODUCTS } from "@/lib/mart/data";
+import { fetchDbProducts } from "@/lib/sync/db";
+import { readStore } from "@/lib/sync/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,20 +93,28 @@ function toQuickNav(): QuickAction[] {
    So we trust context.visibleProducts when sent from client.
 ----------------------------------------------------- */
 
-function normalizeProducts(context: any) {
+async function normalizeProducts(context: any) {
   const fromCtx = Array.isArray(context?.visibleProducts) ? context.visibleProducts : null;
-  const list = fromCtx && fromCtx.length ? fromCtx : PRODUCTS;
 
-  // normalize shape (id/name/priceGHS/category)
+  let list: any[] = fromCtx && fromCtx.length ? fromCtx : [];
+  if (!list.length) {
+    const db = await fetchDbProducts();
+    if (db.data?.length) {
+      list = db.data.map((p: any) => ({ ...p, priceGHS: p.price, category: p.category ?? "general" }));
+    } else {
+      list = readStore().products.map((p: any) => ({ ...p, priceGHS: p.price, category: p.category ?? "general" }));
+    }
+  }
+
   return (list || [])
     .map((p: any) => ({
       ...p,
       id: String(p.id ?? ""),
       name: String(p.name ?? ""),
-      priceGHS: Number(p.priceGHS ?? 0),
+      priceGHS: Number(p.priceGHS ?? p.price ?? 0),
       category: String(p.category ?? p.categorySlug ?? "other"),
     }))
-    .filter((p: any) => p.id && p.name && Number.isFinite(p.priceGHS) && p.priceGHS > 0);
+    .filter((p: any) => p.id && p.name && Number.isFinite(p.priceGHS) && p.priceGHS > 0 && p.is_active !== false);
 }
 
 /* ---------------- “Embedding-like” search (free) ---------------- */
@@ -398,7 +407,7 @@ export async function POST(req: Request) {
     const lastUser = safeStr([...messages].reverse().find((m) => m.role === "user")?.content).trim();
     const t = lastUser.toLowerCase();
 
-    const products = normalizeProducts(context);
+    const products = await normalizeProducts(context);
 
     // 1) Deterministic “Mart brain” (always correct, always safe)
 

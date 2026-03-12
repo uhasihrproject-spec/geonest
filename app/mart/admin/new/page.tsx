@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 // ✅ FIX: productsLocal exports Product, not MartProduct
-import { addProduct, getProducts, type Product } from "@/lib/mart/productsLocal";
+import { addProduct, getProducts, syncProductsFromServer, type Product } from "@/lib/mart/productsLocal";
 
 const AUTH_KEY = "geonest_admin_auth";
 
@@ -124,6 +124,7 @@ export default function AdminAddNewPage() {
   const [existing, setExisting] = useState<Product[]>([]);
   useEffect(() => {
     setExisting(getProducts());
+    void syncProductsFromServer().then(setExisting);
 
     const onStorage = () => setExisting(getProducts());
     window.addEventListener("storage", onStorage);

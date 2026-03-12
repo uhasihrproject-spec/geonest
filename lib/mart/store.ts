@@ -4,6 +4,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { MartProduct } from "@/lib/mart/data";
 
+type CartProductInput = Pick<MartProduct, "id" | "name" | "priceGHS"> & {
+  image?: string;
+  category?: string;
+  categorySlug?: string;
+};
+
 export type CartItem = {
   productId: string;
   name: string;
@@ -23,7 +29,7 @@ type MartState = {
 
   // cart
   cart: Record<string, CartItem>;
-  addToCart: (product: MartProduct, qty?: number) => void;
+  addToCart: (product: CartProductInput, qty?: number) => void;
   removeFromCart: (productId: string) => void;
   setQty: (productId: string, qty: number) => void;
   clearCart: () => void;

@@ -1,37 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { findOrder, updateOrder } from "@/lib/mart/ordersLocal";
 
 declare global {
   interface Window {
-    CheckoutSdk?: any;
+    CheckoutSdk?: new () => {
+      openModal: (args: {
+        purchaseInfo: {
+          amount: number;
+          purchaseDescription: string;
+          customerPhoneNumber: string;
+          clientReference: string;
+        };
+        config: {
+          branding: string;
+          callbackUrl: string;
+          merchantAccount: number;
+          basicAuth: string;
+        };
+        callBacks: {
+          onPaymentSuccess: (payload: unknown) => void;
+          onPaymentFailure: (payload: unknown) => void;
+          onClose: () => void;
+        };
+      }) => void;
+    };
   }
 }
 
 export default function HubtelPayPage() {
-  const sp = useSearchParams();
-  const ref = (sp.get("ref") || "").toUpperCase();
-  const method = (sp.get("method") as "momo" | "card" | "cash" | null) || "momo";
-
+  const [ref, setRef] = useState("");
+  const [method, setMethod] = useState<"momo" | "card" | "cash">("momo");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const order = ref ? findOrder(ref) : null;
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const nextRef = (url.searchParams.get("ref") || "").toUpperCase();
+    const nextMethod = (url.searchParams.get("method") as "momo" | "card" | "cash" | null) || "momo";
+    setRef(nextRef);
+    setMethod(nextMethod);
+  }, []);
+
+  const order = useMemo(() => (ref ? findOrder(ref) : null), [ref]);
 
   useEffect(() => {
     if (!ref) setErr("Missing order reference.");
     if (ref && !order) setErr("Order not found on this device.");
+    if (ref && order) setErr(null);
   }, [ref, order]);
 
   async function start() {
     setErr(null);
     if (!order) return setErr("Order not found.");
 
-    // COD: no Hubtel payment, just confirm and go back to tracking
     if (method === "cash") {
       updateOrder(order.orderRef, {
         paymentMethod: "cash",
@@ -43,7 +68,6 @@ export default function HubtelPayPage() {
 
     setBusy(true);
 
-    // If Hubtel script isn't available, show a friendly error
     const CheckoutSdk = window.CheckoutSdk;
     if (!CheckoutSdk) {
       setBusy(false);
@@ -51,7 +75,6 @@ export default function HubtelPayPage() {
       return;
     }
 
-    // Hubtel SDK usage: openModal({ purchaseInfo, config, callBacks })
     const checkout = new CheckoutSdk();
 
     const purchaseInfo = {
@@ -78,7 +101,7 @@ export default function HubtelPayPage() {
       purchaseInfo,
       config,
       callBacks: {
-        onPaymentSuccess: (payload: any) => {
+        onPaymentSuccess: (payload) => {
           updateOrder(order.orderRef, {
             paymentMethod: method,
             paymentStatus: "paid",
@@ -86,7 +109,7 @@ export default function HubtelPayPage() {
           });
           window.location.href = `/mart/track`;
         },
-        onPaymentFailure: (payload: any) => {
+        onPaymentFailure: (payload) => {
           updateOrder(order.orderRef, {
             paymentMethod: method,
             paymentStatus: "pending",

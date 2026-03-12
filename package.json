@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:sync": "node --experimental-strip-types scripts/sync-validation.mjs",
+    "test:no-static": "node scripts/no-static-runtime.mjs"
   },
   "dependencies": {
     "fuse.js": "^7.1.0",
