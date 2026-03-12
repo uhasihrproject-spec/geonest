@@ -21,9 +21,19 @@ function fallbackProducts() {
   }));
 }
 
+function mergedProducts(storeProducts: any[]) {
+  const base = fallbackProducts();
+  const map = new Map(base.map((p) => [p.id, p]));
+  for (const p of storeProducts || []) {
+    const prev = map.get(p.id);
+    map.set(p.id, { ...prev, ...p });
+  }
+  return Array.from(map.values());
+}
+
 export async function GET() {
   const store = readStore();
-  const products = store.products.length ? store.products : fallbackProducts();
+  const products = mergedProducts(store.products);
   return NextResponse.json({ products, deals: store.deals });
 }
 

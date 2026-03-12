@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { PRODUCTS } from "@/lib/mart/data";
 import { readStore } from "@/lib/sync/store";
 
+function mergedProducts(storeProducts: any[], fallback: any[]) {
+  const map = new Map(fallback.map((p) => [p.id, p]));
+  for (const p of storeProducts || []) {
+    const prev = map.get(p.id);
+    map.set(p.id, { ...prev, ...p });
+  }
+  return Array.from(map.values());
+}
+
 export async function GET() {
   const store = readStore();
   const now = Date.now();
@@ -23,6 +32,6 @@ export async function GET() {
     tags: Array.isArray(p.tags) ? p.tags : [],
     description: p.description ?? null,
   }));
-  const products = (store.products.length ? store.products : fallback).filter((p) => p.is_active);
+  const products = mergedProducts(store.products, fallback).filter((p) => p.is_active);
   return NextResponse.json({ products, deals: activeDeals });
 }

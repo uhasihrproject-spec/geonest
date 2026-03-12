@@ -126,7 +126,8 @@ export async function syncProductsFromServer() {
     description: p.description ?? undefined,
   })) as Product[];
 
-  if (!mapped.length) return getProducts();
+  const activeMapped = mapped.filter((p) => p.is_active !== false);
+  if (!activeMapped.length) return getProducts();
 
   const next = applyDeals(mapped, data.deals);
   setCachedProducts(next);
