@@ -6,10 +6,15 @@ import { fetchDbDeals, insertDbDeal } from "@/lib/sync/db";
 export async function GET() {
   const dbDeals = await fetchDbDeals();
   const localDeals = readStore().deals;
-  const deals = [...(dbDeals || []), ...localDeals].filter(
+  const deals = [...(dbDeals.data || []), ...localDeals].filter(
     (d, i, arr) => arr.findIndex((x) => x.id === d.id) === i,
   );
-  return NextResponse.json({ deals });
+
+  if (!deals.length && dbDeals.configured && dbDeals.error) {
+    return NextResponse.json({ deals: [], error: dbDeals.error, sync_status: "failed" }, { status: 503 });
+  }
+
+  return NextResponse.json({ deals, sync_status: "synced", error: null });
 }
 
 export async function POST(req: NextRequest) {
@@ -29,5 +34,5 @@ export async function POST(req: NextRequest) {
   await insertDbDeal({ ...payload, updated_at: new Date().toISOString() });
   createSyncEvent({ entity_type: "deal", entity_id: body.id, action: "created", source: "website", payload: body });
   await processOutboundSyncQueue();
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, sync_status: "pending" });
 }

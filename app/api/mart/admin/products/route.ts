@@ -1,26 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PRODUCTS } from "@/lib/mart/data";
 import { createSyncEvent, readStore, upsertProduct } from "@/lib/sync/store";
 import { processOutboundSyncQueue } from "@/lib/sync/dispatcher";
 import { fetchDbDeals, fetchDbProducts, insertDbProduct } from "@/lib/sync/db";
-
-function fallbackProducts() {
-  return (PRODUCTS || []).map((p: any) => ({
-    id: String(p.id),
-    name: String(p.name),
-    sku: String((p as any).sku ?? p.id),
-    price: Number((p as any).priceGHS ?? 0),
-    is_active: true,
-    updated_at: new Date().toISOString(),
-    source_system: "website" as const,
-    external_ref: null,
-    category: (p as any).category ?? (p as any).categorySlug ?? "general",
-    image: (p as any).image ?? null,
-    badge: (p as any).badge ?? null,
-    tags: Array.isArray((p as any).tags) ? (p as any).tags : [],
-    description: (p as any).description ?? null,
-  }));
-}
 
 function mergedProducts(...sources: any[][]) {
   const map = new Map<string, any>();
@@ -35,13 +16,25 @@ function mergedProducts(...sources: any[][]) {
 
 export async function GET() {
   const store = readStore();
-  const [dbProducts, dbDeals] = await Promise.all([fetchDbProducts(), fetchDbDeals()]);
-  const products = mergedProducts(fallbackProducts(), dbProducts || [], store.products || []);
-  const deals = [...(dbDeals || []), ...store.deals].reduce((acc: any[], d) => {
-    if (!acc.some((x) => x.id === d.id)) acc.push(d);
-    return acc;
-  }, []);
-  return NextResponse.json({ products, deals });
+  const [dbProductsRes, dbDealsRes] = await Promise.all([fetchDbProducts(), fetchDbDeals()]);
+  const products = mergedProducts(dbProductsRes.data || [], store.products || []);
+  const deals = [...(dbDealsRes.data || []), ...store.deals].filter(
+    (d, i, arr) => arr.findIndex((x) => x.id === d.id) === i,
+  );
+
+  if (!products.length && dbProductsRes.configured && dbProductsRes.error) {
+    return NextResponse.json(
+      {
+        products: [],
+        deals,
+        error: `Could not load products from Supabase: ${dbProductsRes.error}`,
+        sync_status: "failed",
+      },
+      { status: 503 },
+    );
+  }
+
+  return NextResponse.json({ products, deals, sync_status: "synced", error: null });
 }
 
 export async function POST(req: NextRequest) {
@@ -66,5 +59,5 @@ export async function POST(req: NextRequest) {
     payload: body,
   });
   await processOutboundSyncQueue();
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, sync_status: "pending" });
 }

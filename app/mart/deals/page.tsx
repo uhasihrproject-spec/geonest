@@ -16,13 +16,12 @@ import {
 import { getProducts, syncProductsFromServer } from "@/lib/mart/productsLocal";
 import { askAssistant } from "@/lib/mart/assistant/controller";
 import { useMartStore } from "@/lib/mart/store";
-import type { MartProduct } from "@/lib/mart/data";
 
 /* ---------------- TYPES ---------------- */
 
 type DealType = "all" | "flash" | "weekly" | "clearance";
 
-type DealProduct = MartProduct & {
+type DealProduct = import("@/lib/mart/productsLocal").Product & {
   originalPriceGHS?: number;
   dealType?: "flash" | "weekly" | "clearance";
   dealEndsAt?: string; // ISO date for countdown (recommended)

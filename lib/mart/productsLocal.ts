@@ -1,5 +1,3 @@
-import { PRODUCTS } from "@/lib/mart/data";
-
 export type DealType = "flash" | "weekly" | "clearance";
 
 type RemoteProduct = {
@@ -30,7 +28,12 @@ type RemoteDeal = {
   updated_at: string;
 };
 
-export type Product = (typeof PRODUCTS)[number] & {
+export type Product = {
+  id: string;
+  name: string;
+  priceGHS: number;
+  categorySlug?: string;
+  category?: string;
   originalPriceGHS?: number;
   dealType?: DealType;
   dealEndsAt?: string;
@@ -41,10 +44,12 @@ export type Product = (typeof PRODUCTS)[number] & {
   is_active?: boolean;
   sku?: string;
   updated_at?: string;
+  badge?: string;
 };
 
-const CACHE_KEY = "gm_products_cache_v2";
-const DEALS_CACHE_KEY = "gm_deals_cache_v1";
+const CACHE_KEY = "gm_products_cache_v3";
+const DEALS_CACHE_KEY = "gm_deals_cache_v2";
+const SYNC_STATE_KEY = "gm_products_sync_state_v1";
 
 function safeParse<T>(v: string | null, fallback: T): T {
   try {
@@ -55,14 +60,28 @@ function safeParse<T>(v: string | null, fallback: T): T {
 }
 
 function getCachedProducts(): Product[] {
-  if (typeof window === "undefined") return (PRODUCTS as Product[]).map((p) => ({ ...p, is_active: true }));
-  return safeParse<Product[]>(localStorage.getItem(CACHE_KEY), (PRODUCTS as Product[]).map((p) => ({ ...p, is_active: true })));
+  if (typeof window === "undefined") return [];
+  return safeParse<Product[]>(localStorage.getItem(CACHE_KEY), []);
 }
 
 function setCachedProducts(items: Product[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(CACHE_KEY, JSON.stringify(items));
   window.dispatchEvent(new StorageEvent("storage", { key: CACHE_KEY }));
+}
+
+function setSyncState(state: { status: "pending" | "synced" | "failed"; error: string | null }) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SYNC_STATE_KEY, JSON.stringify({ ...state, at: Date.now() }));
+  window.dispatchEvent(new StorageEvent("storage", { key: SYNC_STATE_KEY }));
+}
+
+export function getProductSyncState() {
+  if (typeof window === "undefined") return { status: "pending" as const, error: null as string | null };
+  return safeParse<{ status: "pending" | "synced" | "failed"; error: string | null }>(
+    localStorage.getItem(SYNC_STATE_KEY),
+    { status: "pending", error: null },
+  );
 }
 
 function mapDealType(title: string): DealType {
@@ -106,12 +125,29 @@ export function getProducts(): Product[] {
 
 export async function syncProductsFromServer() {
   if (typeof window === "undefined") return [] as Product[];
+  setSyncState({ status: "pending", error: null });
   const res = await fetch("/api/mart/admin/products", { cache: "no-store" });
-  if (!res.ok) return getProducts();
-  const data = (await res.json()) as { products: RemoteProduct[]; deals: RemoteDeal[] };
-  localStorage.setItem(DEALS_CACHE_KEY, JSON.stringify(data.deals));
 
-  const mapped = data.products.map((p) => ({
+  if (!res.ok) {
+    const errText = `Sync failed (${res.status}).`;
+    setSyncState({ status: "failed", error: errText });
+    throw new Error(errText);
+  }
+
+  const data = (await res.json()) as {
+    products: RemoteProduct[];
+    deals: RemoteDeal[];
+    error?: string | null;
+  };
+
+  if (data.error) {
+    setSyncState({ status: "failed", error: data.error });
+    throw new Error(data.error);
+  }
+
+  localStorage.setItem(DEALS_CACHE_KEY, JSON.stringify(data.deals || []));
+
+  const mapped = (data.products || []).map((p) => ({
     id: p.id,
     name: p.name,
     priceGHS: p.price,
@@ -127,10 +163,14 @@ export async function syncProductsFromServer() {
   })) as Product[];
 
   const activeMapped = mapped.filter((p) => p.is_active !== false);
-  if (!activeMapped.length) return getProducts();
+  if (!activeMapped.length) {
+    setSyncState({ status: "failed", error: "No active products from live source." });
+    throw new Error("No active products from live source.");
+  }
 
-  const next = applyDeals(mapped, data.deals);
+  const next = applyDeals(mapped, data.deals || []);
   setCachedProducts(next);
+  setSyncState({ status: "synced", error: null });
   return next.filter((p) => p.is_active !== false);
 }
 
@@ -140,6 +180,7 @@ export function updateProduct(id: string, patch: Partial<Product>) {
   if (i < 0) return;
   list[i] = { ...list[i], ...patch };
   setCachedProducts(list);
+  setSyncState({ status: "pending", error: null });
 
   const payload = {
     id,
@@ -154,7 +195,9 @@ export function updateProduct(id: string, patch: Partial<Product>) {
     method: "PATCH",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
-  });
+  })
+    .then(() => setSyncState({ status: "synced", error: null }))
+    .catch((e) => setSyncState({ status: "failed", error: e instanceof Error ? e.message : "Product sync failed" }));
 
   if (patch.dealType || patch.originalPriceGHS === undefined) {
     const discountValue = (list[i].originalPriceGHS ?? list[i].priceGHS) - list[i].priceGHS;
@@ -200,6 +243,7 @@ export function addProduct(p: Product) {
   if (list.some((x) => x.id === p.id)) throw new Error("Product ID already exists");
   const next = [{ ...p, is_active: true }, ...list];
   setCachedProducts(next);
+  setSyncState({ status: "pending", error: null });
   fetch("/api/mart/admin/products", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -211,13 +255,18 @@ export function addProduct(p: Product) {
       is_active: true,
       external_ref: null,
     }),
-  });
+  })
+    .then(() => setSyncState({ status: "synced", error: null }))
+    .catch((e) => setSyncState({ status: "failed", error: e instanceof Error ? e.message : "Create sync failed" }));
 }
 
 export function deleteCustomProduct(id: string) {
   const list = getCachedProducts().map((p) => (p.id === id ? { ...p, is_active: false } : p));
   setCachedProducts(list);
-  fetch(`/api/mart/admin/products/${id}`, { method: "DELETE" });
+  setSyncState({ status: "pending", error: null });
+  fetch(`/api/mart/admin/products/${id}`, { method: "DELETE" })
+    .then(() => setSyncState({ status: "synced", error: null }))
+    .catch((e) => setSyncState({ status: "failed", error: e instanceof Error ? e.message : "Delete sync failed" }));
 }
 
 export function getCustomProducts(): Product[] {

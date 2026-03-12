@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import ProductCard from "./ProductCard";
 import { askAssistant } from "@/lib/mart/assistant/controller";
-import type { MartProduct } from "@/lib/mart/data";
+import type { Product } from "@/lib/mart/productsLocal";
 
 type ShopContext = {
   page: string;
@@ -32,7 +32,7 @@ export default function ProductGrid({
   products,
   context,
 }: {
-  products: MartProduct[];
+  products: Product[];
   context?: ShopContext;
 }) {
   const topRef = useRef<HTMLDivElement | null>(null);

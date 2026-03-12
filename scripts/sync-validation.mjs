@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 
 const storeMod = await import('../lib/sync/store.ts');
 const signMod = await import('../lib/sync/signature.ts');
@@ -16,7 +15,7 @@ const {
 
 writeStore({ products: [], deals: [], sync_events: [], price_history: [] });
 
-// website -> core admin create/update/deactivate product
+// website -> management create/update/deactivate product
 upsertProduct({ id: 'p-1', name: 'Rice', sku: 'SKU-RICE', price: 30, is_active: true }, 'website');
 createSyncEvent({ entity_type: 'product', entity_id: 'p-1', action: 'created', source: 'website', payload: { id: 'p-1' } });
 upsertProduct({ id: 'p-1', name: 'Rice', sku: 'SKU-RICE', price: 35, is_active: true }, 'website');
@@ -32,7 +31,7 @@ createSyncEvent({ entity_type: 'deal', entity_id: 'd-1', action: 'updated', sour
 upsertDeal({ id: 'd-1', product_id: 'p-1', title: 'weekly', discount_type: 'fixed', discount_value: 3, starts_at: new Date().toISOString(), ends_at: null, is_active: false });
 createSyncEvent({ entity_type: 'deal', entity_id: 'd-1', action: 'deactivated', source: 'website', payload: { id: 'd-1' } });
 
-// core admin -> website idempotent / dedupe
+// management -> website idempotent / dedupe
 const inboundEventId = 'core-evt-1';
 assert.equal(hasEvent(inboundEventId), false);
 createSyncEvent({ event_id: inboundEventId, entity_type: 'product', entity_id: 'p-2', action: 'created', source: 'core_admin', payload: { id: 'p-2' } });

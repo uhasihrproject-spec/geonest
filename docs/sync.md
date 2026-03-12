@@ -2,9 +2,15 @@
 
 ## Environment variables
 
-- `CORE_ADMIN_SYNC_WEBHOOK_URL`: Core admin inbound webhook URL.
-- `WEBSITE_SYNC_WEBHOOK_URL`: Website inbound webhook URL (`/api/sync/webhook`).
-- `SYNC_SHARED_SECRET`: Shared HMAC secret used by both repos.
+### Website repo
+- `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`)
+- `SUPABASE_SERVICE_ROLE_KEY` (server only)
+- `SYNC_SHARED_SECRET`
+- `MANAGEMENT_WEBHOOK_URL` (preferred; fallback: `CORE_ADMIN_SYNC_WEBHOOK_URL`)
+
+### Management repo
+- `SYNC_SHARED_SECRET`
+- `WEBSITE_SYNC_WEBHOOK_URL` (this repo inbound endpoint: `/api/sync/webhook`)
 
 ## Webhook payload example
 

@@ -11,7 +11,9 @@ import {
   PlusCircle,
 } from "lucide-react";
 import {
-  getProducts, syncProductsFromServer,
+  getProductSyncState,
+  getProducts,
+  syncProductsFromServer,
   updateProduct,
   type DealType,
 } from "@/lib/mart/productsLocal";
@@ -43,6 +45,7 @@ export default function AdminProductsPage() {
   const [authed, setAuthed] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   const [q, setQ] = useState("");
   const [onlyDeals, setOnlyDeals] = useState(false);
@@ -50,7 +53,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     setAuthed(sessionStorage.getItem(AUTH_KEY) === "true");
     setProducts(getProducts());
-    void syncProductsFromServer().then(setProducts);
+    void syncProductsFromServer().then((v) => { setProducts(v); setSyncError(null); }).catch(() => setSyncError(getProductSyncState().error || "Product sync failed"));
   }, []);
 
   function reload() {
@@ -141,6 +144,13 @@ export default function AdminProductsPage() {
     <div className="py-10">
       <div className="mx-auto max-w-6xl px-4">
         {/* Toast */}
+        {syncError && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+            {syncError}
+            <button className="ml-3 rounded-full bg-amber-700 px-2 py-1 text-[10px] text-white" onClick={() => void syncProductsFromServer().then((v) => { setProducts(v); setSyncError(null); }).catch(() => setSyncError(getProductSyncState().error || "Retry failed"))}>Retry</button>
+          </div>
+        )}
+
         {toast && (
           <div className="mb-4 rounded-xl bg-neutral-900 px-4 py-2 text-xs text-white">
             {toast}

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES } from "@/lib/mart/data";
 import ShopToolbar from "@/components/mart/shop/ShopToolbar";
 import ProductGrid from "@/components/mart/shop/ProductGrid";
-import { getProducts, syncProductsFromServer, type Product } from "@/lib/mart/productsLocal";
+import { getProductSyncState, getProducts, syncProductsFromServer, type Product } from "@/lib/mart/productsLocal";
 
 function normalize(v = "") {
   return v.trim().toLowerCase();
@@ -33,11 +33,12 @@ function readFiltersFromUrl(): FilterState {
 
 export default function ShopPage() {
   const [all, setAll] = useState<Product[]>([]);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({ q: "", category: "", sort: "featured", min: "", max: "" });
 
   useEffect(() => {
     setAll(getProducts());
-    void syncProductsFromServer().then(setAll);
+    void syncProductsFromServer().then((v) => { setAll(v); setSyncError(null); }).catch(() => setSyncError(getProductSyncState().error || "Sync failed"));
     setFilters(readFiltersFromUrl());
 
     const onStorage = () => setAll(getProducts());
@@ -98,6 +99,19 @@ export default function ShopPage() {
       <div className="mt-6">
         <ShopToolbar categories={CATEGORIES} filters={filters} onChange={applyFilters} />
       </div>
+
+
+      {syncError && (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {syncError}
+          <button
+            className="ml-3 rounded-full bg-amber-700 px-3 py-1 text-xs text-white"
+            onClick={() => void syncProductsFromServer().then((v) => { setAll(v); setSyncError(null); }).catch(() => setSyncError(getProductSyncState().error || "Retry failed"))}
+          >
+            Retry sync
+          </button>
+        </div>
+      )}
 
       <div className="mt-8">
         <ProductGrid

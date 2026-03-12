@@ -8,10 +8,10 @@ function retryDelayMs(retries: number) {
 }
 
 export async function processOutboundSyncQueue() {
-  const target = process.env.CORE_ADMIN_SYNC_WEBHOOK_URL;
+  const target = process.env.MANAGEMENT_WEBHOOK_URL || process.env.CORE_ADMIN_SYNC_WEBHOOK_URL;
   const secret = process.env.SYNC_SHARED_SECRET;
   if (!target || !secret) {
-    return { processed: 0, skipped: true, reason: "Missing CORE_ADMIN_SYNC_WEBHOOK_URL or SYNC_SHARED_SECRET" };
+    return { processed: 0, skipped: true, reason: "Missing MANAGEMENT_WEBHOOK_URL (or CORE_ADMIN_SYNC_WEBHOOK_URL) or SYNC_SHARED_SECRET" };
   }
 
   const due = listDueSyncEvents().filter((e) => e.source === "website");

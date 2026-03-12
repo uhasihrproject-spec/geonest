@@ -5,9 +5,8 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bell, Clock, Flame, ShieldCheck, Truck, Tag } from "lucide-react";
 import { getProducts, syncProductsFromServer } from "@/lib/mart/productsLocal";
-import type { MartProduct } from "@/lib/mart/data";
 
-type DealProduct = MartProduct & {
+type DealProduct = import("@/lib/mart/productsLocal").Product & {
   originalPriceGHS?: number;
   dealType?: "flash" | "weekly" | "clearance";
   dealEndsAt?: string; // ISO

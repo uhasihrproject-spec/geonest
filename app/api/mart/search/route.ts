@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-// Option A: search your in-memory PRODUCTS for now
-import { PRODUCTS } from "@/lib/mart/data";
-
-// If you later move to DB, replace the filter logic with a DB query.
+import { fetchDbProducts } from "@/lib/sync/db";
+import { readStore } from "@/lib/sync/store";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -13,20 +11,26 @@ export async function GET(req: Request) {
     return NextResponse.json({ items: [] });
   }
 
-  const items = PRODUCTS.filter((p) => {
-    const name = p.name?.toLowerCase?.() ?? "";
-    const cat = p.category?.toLowerCase?.() ?? "";
-    const tags = ((p as any).tags ?? []).join(" ").toLowerCase();
-    return name.includes(q) || cat.includes(q) || tags.includes(q);
-  })
+  const db = await fetchDbProducts();
+  const base = db.data?.length
+    ? db.data
+    : readStore().products;
+
+  const items = base
+    .filter((p: any) => {
+      const name = p.name?.toLowerCase?.() ?? "";
+      const cat = (p.category ?? "general")?.toLowerCase?.() ?? "";
+      const tags = ((p as any).tags ?? []).join(" ").toLowerCase();
+      return p.is_active !== false && (name.includes(q) || cat.includes(q) || tags.includes(q));
+    })
     .slice(0, limit)
-    .map((p) => ({
+    .map((p: any) => ({
       id: p.id,
       name: p.name,
-      priceGHS: p.priceGHS,
-      category: p.category,
-      image: p.image,
+      priceGHS: Number(p.price ?? p.priceGHS ?? 0),
+      category: p.category ?? "general",
+      image: p.image ?? null,
     }));
 
-  return NextResponse.json({ items });
+  return NextResponse.json({ items, error: db.error ?? null });
 }
