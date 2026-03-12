@@ -92,6 +92,10 @@ export default function MartAssistant() {
   const recognitionRef = React.useRef<any>(null);
   const lastContext = React.useRef<any>(null);
 
+  React.useEffect(() => {
+    void syncProductsFromServer();
+  }, []);
+
   /* ---------------- CHAT MEMORY (cross session) ---------------- */
   const [msgs, setMsgs] = React.useState<Msg[]>(() => {
     if (typeof window === "undefined") return [];

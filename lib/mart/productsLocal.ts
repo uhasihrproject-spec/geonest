@@ -11,6 +11,11 @@ type RemoteProduct = {
   updated_at: string;
   source_system: "website" | "core_admin";
   external_ref?: string | null;
+  category?: string;
+  image?: string | null;
+  badge?: string | null;
+  tags?: string[];
+  description?: string | null;
 };
 
 type RemoteDeal = {
@@ -110,11 +115,18 @@ export async function syncProductsFromServer() {
     id: p.id,
     name: p.name,
     priceGHS: p.price,
-    categorySlug: "general",
+    categorySlug: p.category ?? "general",
+    category: p.category ?? "general",
     sku: p.sku,
     is_active: p.is_active,
     updated_at: p.updated_at,
+    image: p.image ?? undefined,
+    badge: p.badge ?? undefined,
+    tags: Array.isArray(p.tags) ? p.tags : undefined,
+    description: p.description ?? undefined,
   })) as Product[];
+
+  if (!mapped.length) return getProducts();
 
   const next = applyDeals(mapped, data.deals);
   setCachedProducts(next);

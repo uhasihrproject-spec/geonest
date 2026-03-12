@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PRODUCTS } from "@/lib/mart/data";
 import { createSyncEvent, readStore, upsertProduct } from "@/lib/sync/store";
 import { processOutboundSyncQueue } from "@/lib/sync/dispatcher";
 
+function fallbackProducts() {
+  return (PRODUCTS || []).map((p: any) => ({
+    id: String(p.id),
+    name: String(p.name),
+    sku: String((p as any).sku ?? p.id),
+    price: Number((p as any).priceGHS ?? 0),
+    is_active: true,
+    updated_at: new Date().toISOString(),
+    source_system: "website" as const,
+    external_ref: null,
+    category: (p as any).category ?? (p as any).categorySlug ?? "general",
+    image: (p as any).image ?? null,
+    badge: (p as any).badge ?? null,
+    tags: Array.isArray((p as any).tags) ? (p as any).tags : [],
+    description: (p as any).description ?? null,
+  }));
+}
+
 export async function GET() {
   const store = readStore();
-  return NextResponse.json({ products: store.products, deals: store.deals });
+  const products = store.products.length ? store.products : fallbackProducts();
+  return NextResponse.json({ products, deals: store.deals });
 }
 
 export async function POST(req: NextRequest) {
