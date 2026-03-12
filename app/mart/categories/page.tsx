@@ -75,21 +75,15 @@ export default function CategoriesPage({ searchParams }: { searchParams: SearchP
 
             {/* Search */}
             <div className="mt-6 flex items-center gap-3">
-              <div className="relative w-full max-w-xl">
+              <form action="/mart/categories" className="relative w-full max-w-xl">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
                 <input
                   defaultValue={searchParams.q ?? ""}
                   name="q"
                   placeholder="Search categories…"
                   className="w-full rounded-2xl bg-white px-9 py-3 text-sm outline-none ring-1 ring-neutral-200/70 focus:ring-2 focus:ring-red-500/20"
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    const target = e.currentTarget as HTMLInputElement;
-                    const value = target.value.trim();
-                    window.location.href = value ? `/mart/categories?q=${encodeURIComponent(value)}` : "/mart/categories";
-                  }}
                 />
-              </div>
+              </form>
 
               <Link
                 href="/mart"

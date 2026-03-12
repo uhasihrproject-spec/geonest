@@ -1,14 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Info } from "lucide-react";
 import { findOrder, updateOrder } from "@/lib/mart/ordersLocal";
 
 export default function ManualPayPage() {
-  const sp = useSearchParams();
-  const ref = (sp.get("ref") || "").toUpperCase();
+  const [ref, setRef] = useState("");
+
+  useEffect(() => {
+    const fromUrl = new URL(window.location.href).searchParams.get("ref") || "";
+    setRef(fromUrl.toUpperCase());
+  }, []);
 
   const order = useMemo(() => (ref ? findOrder(ref) : null), [ref]);
 
@@ -20,8 +23,6 @@ export default function ManualPayPage() {
     setErr(null);
     if (!order) return setErr("Order not found.");
 
-    // If user says "I have paid" => DO NOT mark paid directly.
-    // Put it under manual verification.
     if (paidState === "paid") {
       if (note.trim().length < 4) {
         setErr("Please add at least a short note (transaction ID / details).");
@@ -37,7 +38,6 @@ export default function ManualPayPage() {
       return;
     }
 
-    // If user says "I have NOT paid" => revert to the correct unpaid state
     updateOrder(order.orderRef, {
       paymentStatus: order.paymentMethod === "cash" ? "cod" : "pending",
       hubtel: { lastEvent: { manualNote: "User marked as NOT PAID", at: new Date().toISOString() } },
@@ -87,8 +87,8 @@ export default function ManualPayPage() {
             Quick note
           </p>
           <p className="mt-1 text-sm text-neutral-700">
-            If you select <b>“I have paid”</b>, we’ll mark your payment as{" "}
-            <b>Manual verification</b> until admin confirms.
+            If you select <b>“I have paid”</b>, we’ll mark your payment as <b>Manual verification</b> until admin
+            confirms.
             {isCash ? " If you’re paying cash, you can also just pay the rider on delivery." : ""}
           </p>
         </div>
@@ -96,12 +96,7 @@ export default function ManualPayPage() {
         <p className="mt-5 text-sm font-semibold">Have you paid?</p>
         <div className="mt-3 space-y-2 text-sm text-neutral-700">
           <label className="flex items-center gap-2">
-            <input
-              type="radio"
-              name="paid"
-              checked={paidState === "paid"}
-              onChange={() => setPaidState("paid")}
-            />
+            <input type="radio" name="paid" checked={paidState === "paid"} onChange={() => setPaidState("paid")} />
             I have already paid
           </label>
 
@@ -117,9 +112,7 @@ export default function ManualPayPage() {
         </div>
 
         <div className="mt-5">
-          <label className="text-xs text-neutral-500">
-            Transaction details (required if “I have paid”)
-          </label>
+          <label className="text-xs text-neutral-500">Transaction details (required if “I have paid”)</label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}

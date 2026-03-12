@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useMemo } from "react";
 import { ArrowRight, Heart, ShoppingCart, Sparkles } from "lucide-react";
-import { FEATURED_PRODUCTS, type MartProduct } from "@/lib/mart/data";
+import { FEATURED_PRODUCTS } from "@/lib/mart/data";
 import { useMartStore } from "@/lib/mart/store";
 import { askAssistant } from "@/lib/mart/assistant/controller";
 
@@ -21,7 +21,7 @@ export default function FeaturedSection() {
 
   const heroSaved = useMemo(() => (hero ? isWishlisted(hero.id) : false), [hero, isWishlisted]);
 
-  function onAskAI(p: MartProduct) {
+  function onAskAI(p: { id: string; name: string }) {
     askAssistant(`Tell me if ${p.name} is worth it and why.`, { page: "/mart", productId: p.id });
   }
 

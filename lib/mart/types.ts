@@ -5,6 +5,11 @@ export type Product = {
   name: string;
   priceGHS: number;
   categorySlug: string;
+  category?: string;
+  image?: string;
+  badge?: "New" | "Trending" | "Deal";
+  tags?: string[];
+  description?: string;
 };
 
 export type Testimonial = { name: string; role: string; quote: string };
