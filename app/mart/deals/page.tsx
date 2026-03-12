@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   Heart,
 } from "lucide-react";
-import { getProducts } from "@/lib/mart/productsLocal";
+import { getProducts, syncProductsFromServer } from "@/lib/mart/productsLocal";
 import { askAssistant } from "@/lib/mart/assistant/controller";
 import { useMartStore } from "@/lib/mart/store";
 import type { MartProduct } from "@/lib/mart/data";

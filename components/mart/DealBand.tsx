@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Bell, Clock, Flame, ShieldCheck, Truck, Tag } from "lucide-react";
-import { getProducts } from "@/lib/mart/productsLocal";
+import { getProducts, syncProductsFromServer } from "@/lib/mart/productsLocal";
 import type { MartProduct } from "@/lib/mart/data";
 
 type DealProduct = MartProduct & {

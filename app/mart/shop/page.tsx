@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CATEGORIES } from "@/lib/mart/data";
 import ShopToolbar from "@/components/mart/shop/ShopToolbar";
 import ProductGrid from "@/components/mart/shop/ProductGrid";
-import { getProducts, type Product } from "@/lib/mart/productsLocal";
+import { getProducts, syncProductsFromServer, type Product } from "@/lib/mart/productsLocal";
 
 type SearchParams = {
   q?: string;
@@ -29,6 +29,7 @@ export default function ShopPage({ searchParams }: { searchParams: SearchParams 
 
   useEffect(() => {
     setAll(getProducts());
+    void syncProductsFromServer().then(setAll);
     const onStorage = () => setAll(getProducts());
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);

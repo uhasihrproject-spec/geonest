@@ -1,0 +1,34 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createSyncEvent, readStore, upsertProduct } from "@/lib/sync/store";
+import { processOutboundSyncQueue } from "@/lib/sync/dispatcher";
+
+export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  const body = await req.json();
+  const existing = readStore().products.find((p) => p.id === id);
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const next = {
+    ...existing,
+    name: body.name ?? existing.name,
+    sku: body.sku ?? existing.sku,
+    price: body.price ?? existing.price,
+    is_active: body.is_active ?? existing.is_active,
+    external_ref: body.external_ref ?? existing.external_ref,
+  };
+  upsertProduct(next, "website");
+  createSyncEvent({ entity_type: "product", entity_id: id, action: "updated", source: "website", payload: next });
+  await processOutboundSyncQueue();
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  const existing = readStore().products.find((p) => p.id === id);
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const next = { ...existing, is_active: false };
+  upsertProduct(next, "website");
+  createSyncEvent({ entity_type: "product", entity_id: id, action: "deactivated", source: "website", payload: next });
+  await processOutboundSyncQueue();
+  return NextResponse.json({ ok: true });
+}

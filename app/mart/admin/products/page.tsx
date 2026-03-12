@@ -11,7 +11,7 @@ import {
   PlusCircle,
 } from "lucide-react";
 import {
-  getProducts,
+  getProducts, syncProductsFromServer,
   updateProduct,
   type DealType,
 } from "@/lib/mart/productsLocal";
@@ -50,6 +50,7 @@ export default function AdminProductsPage() {
   useEffect(() => {
     setAuthed(sessionStorage.getItem(AUTH_KEY) === "true");
     setProducts(getProducts());
+    void syncProductsFromServer().then(setProducts);
   }, []);
 
   function reload() {

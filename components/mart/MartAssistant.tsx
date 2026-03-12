@@ -5,7 +5,7 @@ import { MessageCircle, X, Send, Mic, Sparkles, Minus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { subscribeAssistant } from "@/lib/mart/assistant/controller";
 import { useMartStore } from "@/lib/mart/store";
-import { getProducts } from "@/lib/mart/productsLocal";
+import { getProducts, syncProductsFromServer } from "@/lib/mart/productsLocal";
 
 /* ---------------- TYPES ---------------- */
 

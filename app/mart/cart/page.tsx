@@ -6,7 +6,7 @@ import { useEffect, useMemo } from "react";
 import { useMartStore } from "@/lib/mart/store";
 import { Minus, Plus, Trash2, ArrowRight, Sparkles } from "lucide-react";
 import { askAssistant, openAssistant } from "@/lib/mart/assistant/controller";
-import { getProducts } from "@/lib/mart/productsLocal";
+import { getProducts, syncProductsFromServer } from "@/lib/mart/productsLocal";
 
 function money(n: number) {
   return `GHS ${Number(n || 0).toFixed(2)}`;
