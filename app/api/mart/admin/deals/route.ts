@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSyncEvent, readStore, upsertDeal } from "@/lib/sync/store";
 import { processOutboundSyncQueue } from "@/lib/sync/dispatcher";
+import { fetchDbDeals, insertDbDeal } from "@/lib/sync/db";
 
 export async function GET() {
-  return NextResponse.json({ deals: readStore().deals });
+  const dbDeals = await fetchDbDeals();
+  const localDeals = readStore().deals;
+  const deals = [...(dbDeals || []), ...localDeals].filter(
+    (d, i, arr) => arr.findIndex((x) => x.id === d.id) === i,
+  );
+  return NextResponse.json({ deals });
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  upsertDeal({
+  const payload = {
     id: body.id,
     product_id: body.product_id,
     title: body.title,
@@ -17,7 +23,10 @@ export async function POST(req: NextRequest) {
     starts_at: body.starts_at ?? new Date().toISOString(),
     ends_at: body.ends_at ?? null,
     is_active: body.is_active ?? true,
-  });
+  };
+
+  upsertDeal(payload);
+  await insertDbDeal({ ...payload, updated_at: new Date().toISOString() });
   createSyncEvent({ entity_type: "deal", entity_id: body.id, action: "created", source: "website", payload: body });
   await processOutboundSyncQueue();
   return NextResponse.json({ ok: true });

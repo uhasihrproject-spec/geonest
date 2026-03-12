@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSyncEvent, readStore, upsertProduct } from "@/lib/sync/store";
 import { processOutboundSyncQueue } from "@/lib/sync/dispatcher";
+import { upsertDbProduct } from "@/lib/sync/db";
 
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -17,6 +18,7 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
     external_ref: body.external_ref ?? existing.external_ref,
   };
   upsertProduct(next, "website");
+  await upsertDbProduct({ ...next, updated_at: new Date().toISOString(), source_system: "website" });
   createSyncEvent({ entity_type: "product", entity_id: id, action: "updated", source: "website", payload: next });
   await processOutboundSyncQueue();
   return NextResponse.json({ ok: true });
@@ -28,6 +30,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const next = { ...existing, is_active: false };
   upsertProduct(next, "website");
+  await upsertDbProduct({ ...next, updated_at: new Date().toISOString(), source_system: "website" });
   createSyncEvent({ entity_type: "product", entity_id: id, action: "deactivated", source: "website", payload: next });
   await processOutboundSyncQueue();
   return NextResponse.json({ ok: true });

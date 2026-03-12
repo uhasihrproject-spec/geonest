@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySignature } from "@/lib/sync/signature";
 import { createSyncEvent, hasEvent, upsertDeal, upsertProduct } from "@/lib/sync/store";
+import { insertDbDeal, insertDbProduct } from "@/lib/sync/db";
 
 export async function POST(req: NextRequest) {
   const raw = await req.text();
@@ -20,22 +21,21 @@ export async function POST(req: NextRequest) {
 
   if (body.entity_type === "product") {
     const p = body.payload;
-    upsertProduct(
-      {
-        id: p.id,
-        name: p.name,
-        sku: p.sku,
-        price: Number(p.price),
-        is_active: Boolean(p.is_active),
-        external_ref: p.external_ref ?? null,
-      },
-      "core_admin",
-    );
+    const payload = {
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      price: Number(p.price),
+      is_active: Boolean(p.is_active),
+      external_ref: p.external_ref ?? null,
+    };
+    upsertProduct(payload, "core_admin");
+    await insertDbProduct({ ...payload, source_system: "core_admin", updated_at: new Date().toISOString() });
   }
 
   if (body.entity_type === "deal") {
     const d = body.payload;
-    upsertDeal({
+    const payload = {
       id: d.id,
       product_id: d.product_id,
       title: d.title,
@@ -44,7 +44,9 @@ export async function POST(req: NextRequest) {
       starts_at: d.starts_at,
       ends_at: d.ends_at ?? null,
       is_active: Boolean(d.is_active),
-    });
+    };
+    upsertDeal(payload);
+    await insertDbDeal({ ...payload, updated_at: new Date().toISOString() });
   }
 
   createSyncEvent({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PRODUCTS } from "@/lib/mart/data";
 import { createSyncEvent, readStore, upsertProduct } from "@/lib/sync/store";
 import { processOutboundSyncQueue } from "@/lib/sync/dispatcher";
+import { fetchDbDeals, fetchDbProducts, insertDbProduct } from "@/lib/sync/db";
 
 function fallbackProducts() {
   return (PRODUCTS || []).map((p: any) => ({
@@ -21,35 +22,42 @@ function fallbackProducts() {
   }));
 }
 
-function mergedProducts(storeProducts: any[]) {
-  const base = fallbackProducts();
-  const map = new Map(base.map((p) => [p.id, p]));
-  for (const p of storeProducts || []) {
-    const prev = map.get(p.id);
-    map.set(p.id, { ...prev, ...p });
+function mergedProducts(...sources: any[][]) {
+  const map = new Map<string, any>();
+  for (const src of sources) {
+    for (const p of src || []) {
+      const prev = map.get(p.id);
+      map.set(p.id, { ...prev, ...p });
+    }
   }
   return Array.from(map.values());
 }
 
 export async function GET() {
   const store = readStore();
-  const products = mergedProducts(store.products);
-  return NextResponse.json({ products, deals: store.deals });
+  const [dbProducts, dbDeals] = await Promise.all([fetchDbProducts(), fetchDbDeals()]);
+  const products = mergedProducts(fallbackProducts(), dbProducts || [], store.products || []);
+  const deals = [...(dbDeals || []), ...store.deals].reduce((acc: any[], d) => {
+    if (!acc.some((x) => x.id === d.id)) acc.push(d);
+    return acc;
+  }, []);
+  return NextResponse.json({ products, deals });
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  upsertProduct(
-    {
-      id: body.id,
-      name: body.name,
-      sku: body.sku ?? body.id,
-      price: Number(body.price),
-      is_active: body.is_active ?? true,
-      external_ref: body.external_ref ?? null,
-    },
-    "website",
-  );
+  const payload = {
+    id: body.id,
+    name: body.name,
+    sku: body.sku ?? body.id,
+    price: Number(body.price),
+    is_active: body.is_active ?? true,
+    external_ref: body.external_ref ?? null,
+  };
+
+  upsertProduct(payload, "website");
+  await insertDbProduct({ ...payload, updated_at: new Date().toISOString(), source_system: "website" });
+
   createSyncEvent({
     entity_type: "product",
     entity_id: body.id,

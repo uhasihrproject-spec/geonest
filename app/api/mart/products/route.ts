@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { PRODUCTS } from "@/lib/mart/data";
 import { readStore } from "@/lib/sync/store";
+import { fetchDbDeals, fetchDbProducts } from "@/lib/sync/db";
 
-function mergedProducts(storeProducts: any[], fallback: any[]) {
-  const map = new Map(fallback.map((p) => [p.id, p]));
-  for (const p of storeProducts || []) {
-    const prev = map.get(p.id);
-    map.set(p.id, { ...prev, ...p });
+function mergedProducts(...sources: any[][]) {
+  const map = new Map<string, any>();
+  for (const src of sources) {
+    for (const p of src || []) {
+      const prev = map.get(p.id);
+      map.set(p.id, { ...prev, ...p });
+    }
   }
   return Array.from(map.values());
 }
@@ -14,9 +17,8 @@ function mergedProducts(storeProducts: any[], fallback: any[]) {
 export async function GET() {
   const store = readStore();
   const now = Date.now();
-  const activeDeals = store.deals.filter(
-    (d) => d.is_active && Date.parse(d.starts_at) <= now && (!d.ends_at || Date.parse(d.ends_at) >= now),
-  );
+  const [dbProducts, dbDeals] = await Promise.all([fetchDbProducts(), fetchDbDeals()]);
+
   const fallback = (PRODUCTS || []).map((p: any) => ({
     id: p.id,
     name: p.name,
@@ -32,6 +34,14 @@ export async function GET() {
     tags: Array.isArray(p.tags) ? p.tags : [],
     description: p.description ?? null,
   }));
-  const products = mergedProducts(store.products, fallback).filter((p) => p.is_active);
+
+  const products = mergedProducts(fallback, dbProducts || [], store.products || []).filter((p) => p.is_active);
+
+  const allDeals = [...(dbDeals || []), ...store.deals];
+  const uniqueDeals = allDeals.filter((d, i) => allDeals.findIndex((x) => x.id === d.id) === i);
+  const activeDeals = uniqueDeals.filter(
+    (d) => d.is_active && Date.parse(d.starts_at) <= now && (!d.ends_at || Date.parse(d.ends_at) >= now),
+  );
+
   return NextResponse.json({ products, deals: activeDeals });
 }
